@@ -1,31 +1,40 @@
-# abstract type AbstractBcubeBackendKA{T} <: Bcube.AbstractBcubeBackend{T} end
+abstract type AbstractKernelLib end
+struct KernelKA <: AbstractKernelLib end # KernelAbstractions
+struct KernelAK <: AbstractKernelLib end # AcceleratedKernels
 
-# struct BcubeBackendKA{T} <: AbstractBcubeBackendKA{T}
-#     backend::T
-# end
-
-# BcubeBackendCUDA() = BcubeBackendKA(CUDA.CUDABackend())
-# BcubeBackendCPUThreaded() = BcubeBackendKA(KernelAbstractions.CPU())
-
-# Adapt.adapt(backend::AbstractBcubeBackendKA, a) = adapt(backend.backend, a)
+abstract type AbstractBcubeBackendAcc{K,B,S} <: Bcube.AbstractBcubeBackend end
+KernelAbstractions.get_backend(a::AbstractBcubeBackendAcc) = a.backend
+is_sync(a::AbstractBcubeBackendAcc) = a.sync
 
 
+struct BcubeBackendAcc{K,B,S} <: AbstractBcubeBackendAcc{K,B,S}
+    backend::B
+    sync::S
+end
 
-# abstract type AbstractBcubeBackendStyleKA <: Bcube.AbstractBcubeBackendStyle end
-# struct CUDABackendStyle <: AbstractBcubeBackendStyleKA end
-# struct CPUThreadBackendStyle <: AbstractBcubeBackendStyleKA end
-# backend_style(::CUDA.CUDABackend) = CUDABackendStyle()
-# backend_style(::KernelAbstractions.CPU) = CPUThreadBackendStyle()
+function BcubeBackendAcc(kernel::AbstractKernelLib, backend::KernelAbstractions.Backend, sync::Bool)
+    BcubeBackendAcc{typeof(kernel),typeof(backend),typeof(sync)}(backend, sync)
+end
+BcubeBackendAcc(backend::KernelAbstractions.Backend; kernel=KernelKA(), sync=true) = BcubeBackendAcc(kernel, backend, sync)
+
+KernelAbstractions.allocate(backend::AbstractBcubeBackendAcc, T, dims...) = KernelAbstractions.allocate(get_backend(backend), T, dims...)
+KernelAbstractions.synchronize(backend::AbstractBcubeBackendAcc) = KernelAbstractions.synchronize(get_backend(backend))
+KernelAbstractions.zeros(backend::AbstractBcubeBackendAcc, T::Type, dims...) = KernelAbstractions.zeros(get_backend(backend), T, dims...)
+KernelAbstractions.zeros(backend::AbstractBcubeBackendAcc, ::Type{T}, dims::Tuple) where T = KernelAbstractions.zeros(get_backend(backend), T, dims)
+KernelAbstractions.ones(backend::AbstractBcubeBackendAcc, T::Type, dims...) = KernelAbstractions.ones(get_backend(backend), T, dims...)
+KernelAbstractions.ones(backend::AbstractBcubeBackendAcc, ::Type{T}, dims::Tuple) where T = KernelAbstractions.ones(get_backend(backend), T, dims)
+synchronize(backend::AbstractBcubeBackendAcc) = synchronize(get_backend(backend))
+
 
 
 const KABackends = KernelAbstractions.Backend
 
-struct DefaultBcubeCPUBackend end
-
-KernelAbstractions.allocate(::DefaultBcubeCPUBackend, T, dims...) = Array{T}(undef, dims)
-KernelAbstractions.synchronize(::DefaultBcubeCPUBackend) = nothing
-KernelAbstractions.zeros(backend::DefaultBcubeCPUBackend, T::Type, dims...) = KernelAbstractions.zeros(backend, T, dims)
-KernelAbstractions.zeros(::DefaultBcubeCPUBackend, ::Type{T}, dims::Tuple) where T = zeros(T, dims)
-KernelAbstractions.ones(backend::DefaultBcubeCPUBackend, T::Type, dims...) = KernelAbstractions.ones(backend, T, dims)
-KernelAbstractions.ones(::DefaultBcubeCPUBackend, ::Type{T}, dims::Tuple) where T = ones(T, dims)
-synchronize(::DefaultBcubeCPUBackend) = nothing
+# type piracy...
+KernelAbstractions.allocate(::Bcube.BcubeBackendCPUSerial, T, dims...) = Array{T}(undef, dims)
+KernelAbstractions.synchronize(::Bcube.BcubeBackendCPUSerial) = nothing
+KernelAbstractions.zeros(backend::Bcube.BcubeBackendCPUSerial, T::Type, dims...) = KernelAbstractions.zeros(backend, T, dims)
+KernelAbstractions.zeros(::Bcube.BcubeBackendCPUSerial, ::Type{T}, dims::Tuple) where T = zeros(T, dims)
+KernelAbstractions.ones(backend::Bcube.BcubeBackendCPUSerial, T::Type, dims...) = KernelAbstractions.ones(backend, T, dims)
+KernelAbstractions.ones(::Bcube.BcubeBackendCPUSerial, ::Type{T}, dims::Tuple) where T = ones(T, dims)
+KernelAbstractions.get_backend(a::Bcube.BcubeBackendCPUSerial) = a
+is_sync(a::Bcube.BcubeBackendCPUSerial) = false

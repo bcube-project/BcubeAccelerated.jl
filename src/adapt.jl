@@ -178,3 +178,7 @@ function Bcube.inner_faces(mesh::Mesh{T,S,N}) where {T,S,N<:AbstractGPUArray}
     )
     return findall(n_neighbors .> 1)
 end
+
+
+Adapt.adapt_structure(to::AbstractBcubeBackendAcc, x) = adapt_structure(get_backend(to), x)
+Adapt.adapt(to::AbstractBcubeBackendAcc, x) = adapt(get_backend(to), x)

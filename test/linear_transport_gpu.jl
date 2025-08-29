@@ -111,7 +111,7 @@ function main(nx, ny, nite, degree, backend)
         M = assemble_bilinear(m, U, V; backend=backend)
     end
     @timeit to "factorize mass matrix" begin
-        if isa(backend, CUDA.CUDABackend)
+        if isa(get_backend(backend), CUDA.CUDABackend)
             F = CUSOLVER.SparseCholesky(M)
             CUSOLVER.spcholesky_factorise(F, M, 1.e-12)
         else
@@ -174,7 +174,7 @@ function main(nx, ny, nite, degree, backend)
             #sol = LS.solve!(linsolve)
             #rhs .= Δt .* sol.u
             @timeit to "compute rhs (solve)" begin
-                if isa(backend, CUDA.CUDABackend)
+                if isa(get_backend(backend), CUDA.CUDABackend)
                     CUSOLVER.spcholesky_solve(F, b_vol - b_fac, rhs)
                 else
                     rhs = factoM \ (b_vol - b_fac)
@@ -201,10 +201,11 @@ function main(nx, ny, nite, degree, backend)
     @show t_assemble
 end
 
-#const backend = get_backend(ones(2))  ## CPU
-const backend = get_backend(CUDA.ones(2)) ## GPU
-#const backend = BcubeAccelerated.DefaultBcubeCPUBackend()
+#const backendDevice = get_backend(ones(2))  ## CPU
+const backendDevice = get_backend(CUDA.ones(2)) ## GPU
+const backend = BcubeAccelerated.BcubeBackendAcc(backendDevice; kernel=BcubeAccelerated.KernelKA(), sync=false)
 
+#const backend = Bcube.get_bcube_backend()
 
 #warmup :
 disable_timer!(to)
