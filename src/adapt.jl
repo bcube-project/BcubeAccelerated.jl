@@ -49,8 +49,6 @@ import Bcube:
     _get_index,
     _scalar_shape_functions
 
-const WORKGROUP_SIZE = 256
-
 #>>>>>>>> Adapt some structures
 Adapt.@adapt_structure Connectivity
 
@@ -110,19 +108,6 @@ function Adapt.adapt_structure(to, b::BoundaryFaceDomain)
     bc = adapt(to, Bcube.get_bc(b))
     labels = adapt(to, b.labels)
     cache = adapt(to, Bcube.get_cache(b))
-
-    # if !isbits(bc)
-    #     @show typeof(bc)
-    #     error("bc")
-    # end
-    # if !isbits(labels)
-    #     @show typeof(labels)
-    #     error("labels")
-    # end
-    # if !isbits(cache)
-    #     @show typeof(cache)
-    #     error("cache")
-    # end
 
     BoundaryFaceDomain{typeof(mesh),typeof(bc),typeof(labels),typeof(cache)}(
         mesh,

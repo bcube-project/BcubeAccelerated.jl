@@ -111,8 +111,6 @@ function main(nx, ny, nite, degree, backend)
 
     l_Γ(v) = ∫((upwind ∘ (side⁻(u), side⁺(u), side⁻(nΓ))) * jump(v))dΓ
     l_Γ_in(v, t) = ∫((side⁻(bc_in(t)) ⋅ side⁻(nΓ_in)) * side⁻(v))dΓ_in
-    current_time = KernelAbstractions.zeros(backend, Float64, 1)
-    l_Γ_in_t(v) = l_Γ_in(v, current_time)
     l_Γ_in_t2(t) = v -> l_Γ_in(v, t)
     l_Γ_out(v) = ∫((upwind ∘ (side⁻(u), 0.0, side⁻(nΓ_out))) * side⁻(v))dΓ_out
 
