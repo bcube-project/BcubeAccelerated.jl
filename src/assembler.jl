@@ -17,20 +17,13 @@ function AK_assemble_kernel!(i, y::Y, f::F, V::TV, quadrature, domain, backend::
     nothing
 end
 
-# function _update_b!(b::B, V, values, elementInfo::CellInfo) where {B}
-#     idofs = Bcube.get_dofs(V, Bcube.cellindex(elementInfo))
-#     unwrapValues = Bcube._unwrap_cell_integrate(V, values)
-#     Bcube._update_b!(b, idofs, unwrapValues)
-# end
-
-## TODO : AVOID TYPE PIRACY !!!!
-## and avoid atomic on single-threaded CPU cases with a stable dispatch
 function Bcube.__update_b!(b::AbstractVector, dofs, vals, backend::BcubeBackendAcc)
     for (i, val) in zip(dofs, vals)
         Atomix.@atomic b[i] += val
     end
     nothing
 end
+
 function Bcube.__update_b!(
     b::AbstractVector,
     idofs,

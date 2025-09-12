@@ -20,7 +20,6 @@ BcubeVTK = "f7a61acb-f482-4505-b2eb-e9cadd76b6b4"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 CUDA_Runtime_jll = "76a88914-d11a-5bdc-97e0-2f5a05c973a2"
-Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
@@ -28,4 +27,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 
 [targets]
-test = ["Test", "LinearAlgebra", "SparseArrays", "TimerOutputs", "CUDA", "CUDA_Runtime_jll", "StaticArrays", "BcubeVTK", "BenchmarkTools", "Dates"]
+test = ["Test", "LinearAlgebra", "SparseArrays", "TimerOutputs", "CUDA", "CUDA_Runtime_jll", "StaticArrays", "BcubeVTK", "BenchmarkTools"]

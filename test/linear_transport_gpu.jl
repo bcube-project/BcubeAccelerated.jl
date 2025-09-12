@@ -1,9 +1,8 @@
 module LinearTransportGpu
 
 using Bcube
-#include(joinpath(@__DIR__, "../src/BcubeAccelerated.jl"))
 using BcubeAccelerated
-#using BcubeVTK
+using BcubeVTK
 using KernelAbstractions
 using CUDA, CUDA.CUSPARSE, CUDA.CUSOLVER
 using SparseArrays, LinearAlgebra
@@ -12,11 +11,10 @@ using StaticArrays
 using Adapt
 using BcubeVTK
 using BenchmarkTools
-using Dates
 
 const to = TimerOutput()
 
-const VTK_OUTPUT = false
+const VTK_OUTPUT = true
 
 const nx = 500
 const ny = 500
@@ -60,6 +58,24 @@ function upwind(ui, uj, nij)
         flux = cij * uj
     end
     flux
+end
+
+_factorize(backend::Bcube.AbstractBcubeBackend, M) = __factorize(get_backend(backend), M)
+__factorize(backend, M) = factorize(M)
+function __factorize(backend::CUDA.CUDABackend, M)
+    F = CUSOLVER.SparseCholesky(M)
+    CUSOLVER.spcholesky_factorise(F, M, 1.e-12)
+    return F
+end
+
+_solve!(x, A, b, backend::Bcube.AbstractBcubeBackend) = __solve!(x, A, b, get_backend(backend))
+function __solve!(x, A, b, backend::CUDA.CUDABackend)
+    CUSOLVER.spcholesky_solve(A, b, x)
+    return nothing
+end
+function __solve!(x, A, b, backend)
+    x .= A \ b
+    return nothing
 end
 
 function main(nx, ny, nite, degree, backend)
@@ -111,12 +127,7 @@ function main(nx, ny, nite, degree, backend)
         M = assemble_bilinear(m, U, V; backend=backend)
     end
     @timeit to "factorize mass matrix" begin
-        if isa(get_backend(backend), CUDA.CUDABackend)
-            F = CUSOLVER.SparseCholesky(M)
-            CUSOLVER.spcholesky_factorise(F, M, 1.e-12)
-        else
-            factoM = factorize(M)
-        end
+        factoM = _factorize(backend, M)
     end
 
     # factoM = cholesky(M2; check = true)
@@ -136,7 +147,6 @@ function main(nx, ny, nite, degree, backend)
         append_vtk(vtk, u_cpu, t)
     end
 
-    t_assemble = zero(Dates.now())
 
     @timeit to "timeloop" begin
         for i in 1:nite
@@ -150,35 +160,15 @@ function main(nx, ny, nite, degree, backend)
 
             # Assembling linear form
             @timeit to "assemble linear" begin
-                t1 = Dates.now()
                 @timeit to "l_Ω" assemble_linear!(b_vol, l_Ω, V; backend=backend)
                 @timeit to "l_Γ" assemble_linear!(b_fac, l_Γ, V; backend=backend)
                 @timeit to "l_Γ_out" assemble_linear!(b_fac, l_Γ_out, V; backend=backend)
-                # tᵢ = copy(t)
-                # current_time .= tᵢ
                 @timeit to "l_Γ_in" assemble_linear!(b_fac, l_Γ_in_t2(t), V; backend=backend)
-                t_assemble += (Dates.now() - t1)
-            end
-            if false
-                @btime assemble_linear!($b_vol, $l_Ω, $V; backend=$backend)
-                @btime assemble_linear!($b_fac, $l_Γ, $V; backend=$backend)
-                @btime assemble_linear!($b_fac, $l_Γ_out, $V; backend=$backend)
-                # tᵢ = copy(t)
-                # current_time .= tᵢ
-                @btime assemble_linear!($b_fac, $l_Γ_in_t2($t), $V; backend=$backend)
-                error("ici")
             end
 
             ## Compute rhs
-            #LS.set_b(linsolve, b_vol - b_fac)
-            #sol = LS.solve!(linsolve)
-            #rhs .= Δt .* sol.u
             @timeit to "compute rhs (solve)" begin
-                if isa(get_backend(backend), CUDA.CUDABackend)
-                    CUSOLVER.spcholesky_solve(F, b_vol - b_fac, rhs)
-                else
-                    rhs = factoM \ (b_vol - b_fac)
-                end
+                _solve!(rhs, factoM, b_vol - b_fac, backend)
                 rhs .*= Δt
             end
 
@@ -190,6 +180,7 @@ function main(nx, ny, nite, degree, backend)
             ## Update time
             t += Δt
 
+            ## Write VTK outputs
             if VTK_OUTPUT && ((i % nout) == 0)
                 @timeit to "append_vtk" begin
                     u_cpu = adapt(get_backend(zeros(1)), u)
@@ -198,7 +189,6 @@ function main(nx, ny, nite, degree, backend)
             end
         end
     end
-    @show t_assemble
 end
 
 #const backendDevice = get_backend(ones(2))  ## CPU
