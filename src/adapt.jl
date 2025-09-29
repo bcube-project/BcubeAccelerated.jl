@@ -103,7 +103,6 @@ Adapt.@adapt_structure CellDomain
 Adapt.@adapt_structure InteriorFaceDomain
 
 function Adapt.adapt_structure(to, b::BoundaryFaceDomain)
-    #println("Running adapt on BoundaryFaceDomain")
     mesh = adapt(to, Bcube.get_mesh(b))
     bc = adapt(to, Bcube.get_bc(b))
     labels = adapt(to, b.labels)
@@ -155,7 +154,7 @@ function Bcube.inner_faces(mesh::Mesh{T,S,N}) where {T,S,N<:AbstractGPUArray}
     # (maybe I haven't tried)
     f2c = indices(connectivities(mesh, :f2c))
     backend = get_backend(get_nodes(mesh))
-    n_neighbors = KernelAbstractions.zeros(backend, Int, nfaces(mesh))
+    n_neighbors = KernelAbstractions.zeros(backend, eltype(f2c), nfaces(mesh))
     inner_faces_kernel!(backend, WORKGROUP_SIZE)(
         n_neighbors,
         f2c;

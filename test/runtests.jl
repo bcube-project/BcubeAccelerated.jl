@@ -1,6 +1,5 @@
 println("Testing...")
 using Bcube
-#include(joinpath(@__DIR__, "../src/BcubeAccelerated.jl"))
 using BcubeAccelerated
 #using BcubeVTK
 using KernelAbstractions
