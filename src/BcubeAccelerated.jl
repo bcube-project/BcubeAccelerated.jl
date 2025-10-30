@@ -13,6 +13,7 @@ const WORKGROUP_SIZE = 256
 include("utils.jl")
 include("backend.jl")
 include("adapt.jl")
+include("domain.jl")
 include("assembler.jl")
 
 end
