@@ -58,7 +58,8 @@ function Adapt.adapt_structure(to, conn::MeshConnectivity{C,F,T,B}) where {C,F,T
     MeshConnectivity{typeof(ind),F,T,B,typeof(layers)}(layers, ind)
 end
 
-function Adapt.adapt_structure(to, mesh::Mesh)
+function Adapt.adapt_structure(backend::AbstractBcubeBackendAcc, mesh::Mesh)
+    to = get_backend(backend)
     nodes_gpu = adapt(to, get_nodes(mesh))
     entities_gpu = adapt(to, entities(mesh))
     connectivities_gpu = adapt(to, connectivities(mesh))
@@ -75,6 +76,7 @@ function Adapt.adapt_structure(to, mesh::Mesh)
         typeof(bc_nodes_gpu),
         typeof(bc_faces_gpu),
         typeof(metadata_gpu),
+        typeof(backend)
     }(
         nodes_gpu,
         entities_gpu,
@@ -82,6 +84,7 @@ function Adapt.adapt_structure(to, mesh::Mesh)
         bc_nodes_gpu,
         bc_faces_gpu,
         metadata_gpu,
+        backend
     )
 end
 
@@ -164,5 +167,5 @@ function Bcube.inner_faces(mesh::Mesh{T,S,N}) where {T,S,N<:AbstractGPUArray}
 end
 
 
-Adapt.adapt_structure(to::AbstractBcubeBackendAcc, x) = adapt_structure(get_backend(to), x)
-Adapt.adapt(to::AbstractBcubeBackendAcc, x) = adapt(get_backend(to), x)
+#Adapt.adapt_structure(to::AbstractBcubeBackendAcc, x) = adapt_structure(get_backend(to), x)
+#Adapt.adapt(to::AbstractBcubeBackendAcc, x) = adapt(get_backend(to), x)
