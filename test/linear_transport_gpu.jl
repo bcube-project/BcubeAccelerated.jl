@@ -22,7 +22,7 @@ const nite = 100
 const degree = 1
 const c = SA[1.0, 0.0] # Convection velocity (must be a vector)
 const CFL = 0.2
-const Δt = CFL * min(1.0 / nx, 1.0 / ny) / norm(c)
+const Δt = CFL * min(1.0 / nx, 1.0 / ny) / norm(c) / (2 * degree + 1)
 const nout = 20
 
 mutable struct VtkHandler
@@ -40,8 +40,8 @@ function append_vtk(vtk, u::Bcube.AbstractFEFunction, t)
         Dict("u" => u),
         vtk.ite,
         t;
-        discontinuous=true,
-        collection_append=vtk.ite > 0,
+        discontinuous = true,
+        collection_append = vtk.ite > 0,
     )
 
     # Update counter
@@ -68,7 +68,9 @@ function __factorize(backend::CUDA.CUDABackend, M)
     return F
 end
 
-_solve!(x, A, b, backend::Bcube.AbstractBcubeBackend) = __solve!(x, A, b, get_backend(backend))
+function _solve!(x, A, b, backend::Bcube.AbstractBcubeBackend)
+    __solve!(x, A, b, get_backend(backend))
+end
 function __solve!(x, A, b, backend::CUDA.CUDABackend)
     CUSOLVER.spcholesky_solve(A, b, x)
     return nothing
@@ -146,7 +148,6 @@ function main(nx, ny, nite, degree, backend)
         append_vtk(vtk, u_cpu, t)
     end
 
-
     @timeit to "timeloop" begin
         for i in 1:nite
             (i % nout == 0) && println("$i / $nite")
@@ -196,7 +197,11 @@ end
 
 #const backendDevice = get_backend(ones(2))  ## CPU
 const backendDevice = get_backend(CUDA.ones(2)) ## GPU
-const backend = BcubeAccelerated.BcubeBackendAcc(backendDevice; kernel=BcubeAccelerated.KernelKA(), sync=true)
+const backend = BcubeAccelerated.BcubeBackendAcc(
+    backendDevice;
+    kernel = BcubeAccelerated.KernelKA(),
+    sync = true,
+)
 
 #const backend = Bcube.get_bcube_backend()
 
