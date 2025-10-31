@@ -1,26 +1,39 @@
 
 """
-    build_subdomains_by_celltypes(mesh, indices)
+Construct subdomains by cell types using a temporary CPU backend.
 
-Construct sub‑domains of a mesh grouped by cell type.
-
-# Arguments
-- `mesh`: the mesh from which cells are taken.
-- `indices`: a collection of cell indices to be considered.
-
-# Returns
-A tuple of `SubDomain` objects, each containing:
-- a tag to identify groups of `SubDomain` (`tag=nothing` by default),
-- the cell type,
-- the list of indices belonging to that type.
+This implementation copies the cell type information to the CPU to simplify
+the construction of subdomains, then adapts the data back to the provided
+backend. This approach is used for performance and compatibility reasons.
 """
-# function build_subdomains_by_celltypes(mesh, indices::CuArray)
-#     _ctypes = cells(mesh)[indices]
-#     ctypes = tuple(unique(_ctypes)...)
-#     indice_by_ctypes =
-#         map(ct -> indices[filter(i -> _ctypes[i] == ct, 1:length(indices))], ctypes)
-#     return SubDomain.(nothing, ctypes, indice_by_ctypes)
-# end
+function Bcube.build_subdomains_by_celltypes(backend::BcubeBackendAcc, mesh, indices)
+    _ctypes = Bcube.cells(mesh)[indices]
+    indices_cpu = adapt(KernelAbstractions.get_backend([]), indices)
+    _ctypes_cpu = adapt(KernelAbstractions.get_backend([]), _ctypes)
+    ctypes_cpu = tuple(unique(_ctypes_cpu)...)
+    indice_by_ctypes_cpu =
+        map(ct -> indices_cpu[filter(i -> _ctypes_cpu[i] == ct, 1:length(indices_cpu))], ctypes_cpu)
+    subdomains_cpu = Bcube.SubDomain.(nothing, ctypes_cpu, indice_by_ctypes_cpu)
+    subdomains = map(x -> adapt(backend, x), subdomains_cpu)
+    return subdomains
+end
+
+function Bcube.build_subdomains_by_facetypes(backend::BcubeBackendAcc, mesh, indices)
+    indices_cpu = adapt(KernelAbstractions.get_backend([]), indices)
+    _ftypes_cpu = adapt(KernelAbstractions.get_backend([]), Bcube.faces(mesh)[indices])
+    indices_cpu = adapt(KernelAbstractions.get_backend([]), indices)
+    cells_cpu = adapt(KernelAbstractions.get_backend([]), Bcube.cells(mesh))
+    f2c_cpu = adapt(KernelAbstractions.get_backend([]), Bcube.connectivities_indices(mesh, :f2c))
+    f2c_cpu = [f2c_cpu[i] for i in indices_cpu]
+    _ftypes_cpu = [(_ftypes_cpu[i], cells_cpu[f2c_cpu[i]]...) for i in 1:length(_ftypes_cpu)]
+    ftypes_cpu = tuple(unique(_ftypes_cpu)...)
+    indice_by_ftypes_cpu =
+        map(ft -> indices_cpu[filter(i -> _ftypes_cpu[i] == ft, 1:length(_ftypes_cpu))], ftypes_cpu)
+    subdomains_cpu = Bcube.SubDomain.(nothing, ftypes_cpu, indice_by_ftypes_cpu)
+    subdomains = map(x -> adapt(backend, x), subdomains_cpu)
+    return subdomains
+end
+
 
 
 function Bcube._foreach_element(f, domain::AbstractDomain, subdomain, backend::AbstractBcubeBackendAcc)

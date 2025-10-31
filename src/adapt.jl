@@ -50,6 +50,8 @@ import Bcube:
     _scalar_shape_functions
 
 #>>>>>>>> Adapt some structures
+#Adapt.@adapt_structure BcubeBackendAcc
+
 Adapt.@adapt_structure Connectivity
 
 function Adapt.adapt_structure(to, conn::MeshConnectivity{C,F,T,B}) where {C,F,T,B}
@@ -58,14 +60,17 @@ function Adapt.adapt_structure(to, conn::MeshConnectivity{C,F,T,B}) where {C,F,T
     MeshConnectivity{typeof(ind),F,T,B,typeof(layers)}(layers, ind)
 end
 
+Adapt.adapt(to::AbstractBcubeBackendAcc, mesh::Mesh) = Adapt.adapt_structure(to, mesh)
+
 function Adapt.adapt_structure(backend::AbstractBcubeBackendAcc, mesh::Mesh)
-    to = get_backend(backend)
-    nodes_gpu = adapt(to, get_nodes(mesh))
-    entities_gpu = adapt(to, entities(mesh))
-    connectivities_gpu = adapt(to, connectivities(mesh))
-    bc_nodes_gpu = adapt(to, boundary_nodes(mesh))
-    bc_faces_gpu = adapt(to, boundary_faces(mesh))
-    metadata_gpu = adapt(to, get_metadata(mesh))
+
+    nodes_gpu = adapt(backend, get_nodes(mesh))
+    entities_gpu = adapt(backend, entities(mesh))
+    connectivities_gpu = adapt(backend, connectivities(mesh))
+    bc_nodes_gpu = adapt(backend, boundary_nodes(mesh))
+    bc_faces_gpu = adapt(backend, boundary_faces(mesh))
+    metadata_gpu = adapt(backend, get_metadata(mesh))
+    #backend_gpu = adapt(backend, backend)
 
     Mesh{
         topodim(mesh),
@@ -101,6 +106,8 @@ function Adapt.adapt_structure(to, cinfo::CellInfo)
         nodes_index_gpu,
     )
 end
+
+Adapt.@adapt_structure Bcube.SubDomain
 
 Adapt.@adapt_structure CellDomain
 Adapt.@adapt_structure InteriorFaceDomain
@@ -167,5 +174,5 @@ function Bcube.inner_faces(mesh::Mesh{T,S,N}) where {T,S,N<:AbstractGPUArray}
 end
 
 
-#Adapt.adapt_structure(to::AbstractBcubeBackendAcc, x) = adapt_structure(get_backend(to), x)
-#Adapt.adapt(to::AbstractBcubeBackendAcc, x) = adapt(get_backend(to), x)
+Adapt.adapt_structure(to::AbstractBcubeBackendAcc, x) = adapt_structure(get_backend(to), x)
+Adapt.adapt(to::AbstractBcubeBackendAcc, x) = adapt(get_backend(to), x)
