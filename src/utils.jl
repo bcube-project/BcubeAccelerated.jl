@@ -12,6 +12,10 @@ function test_arg(backend, arg)
     test_arg_kernel(backend, WORKGROUP_SIZE)(x, arg; ndrange = size(x))
 end
 
+function test_arg(backend::Bcube.BcubeBackendCPUSerial, arg)
+    return true
+end
+
 function test_arg_AK(i, x, arg)
     x[i] += 1
 end

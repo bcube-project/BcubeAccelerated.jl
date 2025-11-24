@@ -10,3 +10,5 @@ using TimerOutputs
 include("linear_transport_gpu.jl")
 using .LinearTransportGpu
 
+include("covo_gpu.jl")
+using .CovoGpu

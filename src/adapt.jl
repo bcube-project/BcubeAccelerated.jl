@@ -109,6 +109,8 @@ Adapt.@adapt_structure Bcube.SubDomainIterator
 Adapt.@adapt_structure CellDomain
 Adapt.@adapt_structure InteriorFaceDomain
 
+Adapt.@adapt_structure Bcube.PeriodicBCType
+
 function Adapt.adapt_structure(to, b::BoundaryFaceDomain)
     mesh = adapt(to, Bcube.get_mesh(b))
     bc = adapt(to, Bcube.get_bc(b))
@@ -134,13 +136,6 @@ function Adapt.adapt_structure(to, b::BoundaryFaceDomain)
     )
 end
 
-function Adapt.adapt_structure(
-    to,
-    b::BoundaryFaceDomain{M, BC},
-) where {M, BC <: Bcube.PeriodicBCType}
-    error("not implemented yet")
-end
-
 Adapt.@adapt_structure Measure
 
 Adapt.@adapt_structure DofHandler
@@ -153,6 +148,16 @@ function Adapt.adapt_structure(to, feSpace::SingleFESpace{S, FS}) where {S, FS}
         dhl,
         is_continuous(feSpace),
         tags,
+    )
+end
+
+function Adapt.adapt_structure(to, feSpace::MultiFESpace{N}) where {N}
+    feSpaces = map(Base.Fix1(adapt, to), feSpace.feSpaces)
+    mapping = adapt(to, feSpace.mapping)
+    Bcube.MultiFESpace{N, typeof(feSpaces), typeof(mapping)}(
+        feSpaces,
+        mapping,
+        feSpace.arrayOfStruct,
     )
 end
 
@@ -182,4 +187,6 @@ function Bcube.inner_faces(mesh::Mesh{T, S, N}) where {T, S, N <: AbstractGPUArr
 end
 
 Adapt.adapt_structure(to::AbstractBcubeBackendAcc, x) = adapt_structure(get_backend(to), x)
+
+Adapt.adapt(to::Bcube.AbstractBcubeBackend, x) = x
 Adapt.adapt(to::AbstractBcubeBackendAcc, x) = adapt(get_backend(to), x)

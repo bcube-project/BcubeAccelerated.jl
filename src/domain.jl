@@ -48,11 +48,11 @@ function Bcube.build_subdomains_by_facetypes(backend::BcubeBackendAcc, mesh, ind
 end
 
 function Bcube._foreach_element(
-    f,
-    domain::AbstractDomain,
-    subdomain,
+    f::F,
+    domain::D,
+    subdomain::SD,
     backend::AbstractBcubeBackendAcc,
-)
+) where {F <: Function, D <: Bcube.AbstractDomain, SD <: Bcube.SubDomain}
     indices = Bcube.get_indices(subdomain)
     iter_subdomain = Bcube.SubDomainIterator(domain, subdomain)
     _f(i) = f(iter_subdomain[i])
@@ -80,4 +80,37 @@ function Bcube._map_element(
     # a = AK.map(_f, indices, get_backend(backend))
     # KernelAbstractions.synchronize(get_backend(backend))
     # return a
+end
+
+function _return_type_size(valSize, f, elementInfo)
+    fₑ = Bcube.materialize(f, elementInfo)
+    elementPoint = Bcube.get_dummy_element_point(elementInfo)
+    value = Bcube.materialize(fₑ, elementPoint)
+    _ndims = ndims(value)
+    for k in 1:max(1, _ndims)
+        valSize[k] = size(value, k)
+    end
+    value
+end
+
+function Bcube.get_return_type_and_codim(
+    f::Bcube.AbstractLazy,
+    domain::Bcube.AbstractDomain,
+    backend::AbstractBcubeBackendAcc,
+)
+    subdomain = first(Bcube.get_subdomains(domain))
+    iter_subdomain = Bcube.SubDomainIterator(domain, subdomain)
+    indices = KernelAbstractions.zeros(backend, Int, 1)
+    function _f(i, valSize)
+        elementInfo = iter_subdomain[i]
+        _return_type_size(valSize, f, elementInfo)
+        nothing
+    end
+    maxRank = 10
+    valSize = KernelAbstractions.zeros(backend, Int, maxRank)
+    AK.foreachindex(i -> _f(i, valSize), indices, get_backend(backend))
+    KernelAbstractions.synchronize(get_backend(backend))
+    N = (findall(x -> x ≠ 0, Array(valSize))...,)
+    T = Base.return_types(_f, (Int, eltype(valSize)))
+    return T, N
 end
