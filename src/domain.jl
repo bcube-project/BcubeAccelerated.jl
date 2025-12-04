@@ -15,7 +15,9 @@ function Bcube.build_subdomains_by_celltypes(backend::BcubeBackendAcc, mesh, ind
         ct -> indices_cpu[filter(i -> _ctypes_cpu[i] == ct, 1:length(indices_cpu))],
         ctypes_cpu,
     )
-    subdomains_cpu = Bcube.SubDomain.(nothing, ctypes_cpu, indice_by_ctypes_cpu)
+    offsets_cpu = Bcube.cumulative_sum_exclusive(map(length, indice_by_ctypes_cpu))
+    subdomains_cpu =
+        Bcube.SubDomain.(nothing, ctypes_cpu, indice_by_ctypes_cpu, offsets_cpu)
     subdomains = map(x -> adapt(backend, x), subdomains_cpu)
     return subdomains
 end
@@ -42,7 +44,9 @@ function Bcube.build_subdomains_by_facetypes(backend::BcubeBackendAcc, mesh, ind
         ft -> indices_cpu[filter(i -> _ftypes_cpu[i] == ft, 1:length(_ftypes_cpu))],
         ftypes_cpu,
     )
-    subdomains_cpu = Bcube.SubDomain.(nothing, ftypes_cpu, indice_by_ftypes_cpu)
+    offsets_cpu = Bcube.cumulative_sum_exclusive(map(length, indice_by_ftypes_cpu))
+    subdomains_cpu =
+        Bcube.SubDomain.(nothing, ftypes_cpu, indice_by_ftypes_cpu, offsets_cpu)
     subdomains = map(x -> adapt(backend, x), subdomains_cpu)
     return subdomains
 end
@@ -55,7 +59,7 @@ function Bcube._foreach_element(
 ) where {F <: Function, D <: Bcube.AbstractDomain, SD <: Bcube.SubDomain}
     indices = Bcube.get_indices(subdomain)
     iter_subdomain = Bcube.SubDomainIterator(domain, subdomain)
-    _f(i) = f(iter_subdomain[i])
+    _f(i) = f(iter_subdomain[i]...)
     AK.foreachindex(_f, indices, get_backend(backend))
     KernelAbstractions.synchronize(get_backend(backend))
     return nothing
