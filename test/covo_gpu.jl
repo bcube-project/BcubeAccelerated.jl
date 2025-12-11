@@ -305,7 +305,7 @@ end
 
 # Settings
 if get(ENV, "BenchmarkMode", "false") == "false" #hide
-    const cellfactor = 4
+    const cellfactor = 1
     const nx = 32 * cellfactor + 1
     const ny = 32 * cellfactor + 1
     const fspace = :Lagrange
@@ -340,7 +340,7 @@ const Δt = CFL * 2 * l / (nx - 1) / ((1 + β) * U₀ + c₀) / (2 * degree + 1)
 const nout = 100 # Number of time steps to save
 const outputpath = "./covo/"
 const output = joinpath(@__DIR__, outputpath, "covo_deg$degree")
-const nite = 10#Int(floor(nperiod * 2 * l / (U₀ * Δt))) + 1
+const nite = Int(floor(nperiod * 2 * l / (U₀ * Δt))) + 1
 
 function build_mass_matrix_test(U, V, dΩ::D) where {D <: AbstractMeasure}
     _m(u, v) = ∫(u ⋅ v)dΩ

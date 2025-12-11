@@ -1,6 +1,6 @@
 name = "BcubeAccelerated"
 uuid = "935b9d52-a04c-44ad-acd9-0efb55612bd5"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Ghislain Blanchard, Maxime Bouyges"]
 
 [deps]
@@ -13,7 +13,7 @@ KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 
 [compat]
 AcceleratedKernels = "0.4.3"
-Bcube = "0.3"
+Bcube = "0.3.3"
 KernelAbstractions = "0.9"
 
 [extras]
