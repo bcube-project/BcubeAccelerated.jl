@@ -14,15 +14,15 @@ using BenchmarkTools
 
 const to = TimerOutput()
 
-const VTK_OUTPUT = true
+const VTK_OUTPUT = false
 
 const nx = 500
 const ny = 500
 const nite = 100
-const degree = 0
+const degree = 1
 const c = SA[1.0, 0.0] # Convection velocity (must be a vector)
 const CFL = 0.2
-const Δt = CFL * min(1.0 / nx, 1.0 / ny) / norm(c)
+const Δt = CFL * min(1.0 / nx, 1.0 / ny) / norm(c) / (2 * degree + 1)
 const nout = 20
 
 mutable struct VtkHandler
@@ -40,8 +40,8 @@ function append_vtk(vtk, u::Bcube.AbstractFEFunction, t)
         Dict("u" => u),
         vtk.ite,
         t;
-        discontinuous=true,
-        collection_append=vtk.ite > 0,
+        discontinuous = true,
+        collection_append = vtk.ite > 0,
     )
 
     # Update counter
@@ -68,7 +68,9 @@ function __factorize(backend::CUDA.CUDABackend, M)
     return F
 end
 
-_solve!(x, A, b, backend::Bcube.AbstractBcubeBackend) = __solve!(x, A, b, get_backend(backend))
+function _solve!(x, A, b, backend::Bcube.AbstractBcubeBackend)
+    __solve!(x, A, b, get_backend(backend))
+end
 function __solve!(x, A, b, backend::CUDA.CUDABackend)
     CUSOLVER.spcholesky_solve(A, b, x)
     return nothing
@@ -88,11 +90,12 @@ function main(nx, ny, nite, degree, backend)
     V = TestFESpace(U)
     u = FEFunction(U, KernelAbstractions.zeros(backend, Float64, get_ndofs(U)))
 
+    Ω = CellDomain(mesh)
     Γ = InteriorFaceDomain(mesh)
     Γ_in = BoundaryFaceDomain(mesh, (:xmin,))
     Γ_out = BoundaryFaceDomain(mesh, (:xmax, :ymin, :ymax))
 
-    dΩ = Measure(CellDomain(mesh), 2 * degree + 1)
+    dΩ = Measure(Ω, 2 * degree + 1)
     dΓ = Measure(Γ, 2 * degree + 1)
     dΓ_in = Measure(Γ_in, 2 * degree + 1)
     dΓ_out = Measure(Γ_out, 2 * degree + 1)
@@ -122,7 +125,7 @@ function main(nx, ny, nite, degree, backend)
     println("Building mass matrix")
 
     @timeit to "assemble mass matrix" begin
-        M = assemble_bilinear(m, U, V; backend=backend)
+        M = assemble_bilinear(m, U, V)
     end
     @timeit to "factorize mass matrix" begin
         factoM = _factorize(backend, M)
@@ -145,7 +148,6 @@ function main(nx, ny, nite, degree, backend)
         append_vtk(vtk, u_cpu, t)
     end
 
-
     @timeit to "timeloop" begin
         for i in 1:nite
             (i % nout == 0) && println("$i / $nite")
@@ -156,12 +158,16 @@ function main(nx, ny, nite, degree, backend)
                 b_fac .= 0.0
             end
 
+            # CUDA.@profile assemble_linear!(b_vol, l_Ω, V; backend=backend)
+            # CUDA.@profile assemble_linear!(b_vol, l_Ω, V; backend=backend)
+            # error("ici")
+
             # Assembling linear form
             @timeit to "assemble linear" begin
-                @timeit to "l_Ω" assemble_linear!(b_vol, l_Ω, V; backend=backend)
-                @timeit to "l_Γ" assemble_linear!(b_fac, l_Γ, V; backend=backend)
-                @timeit to "l_Γ_out" assemble_linear!(b_fac, l_Γ_out, V; backend=backend)
-                @timeit to "l_Γ_in" assemble_linear!(b_fac, l_Γ_in_t2(t), V; backend=backend)
+                @timeit to "l_Ω" assemble_linear!(b_vol, l_Ω, V)
+                @timeit to "l_Γ" assemble_linear!(b_fac, l_Γ, V)
+                @timeit to "l_Γ_out" assemble_linear!(b_fac, l_Γ_out, V)
+                @timeit to "l_Γ_in" assemble_linear!(b_fac, l_Γ_in_t2(t), V)
             end
 
             ## Compute rhs
@@ -191,7 +197,11 @@ end
 
 #const backendDevice = get_backend(ones(2))  ## CPU
 const backendDevice = get_backend(CUDA.ones(2)) ## GPU
-const backend = BcubeAccelerated.BcubeBackendAcc(backendDevice; kernel=BcubeAccelerated.KernelKA(), sync=false)
+const backend = BcubeAccelerated.BcubeBackendAcc(
+    backendDevice;
+    kernel = BcubeAccelerated.KernelKA(),
+    sync = true,
+)
 
 #const backend = Bcube.get_bcube_backend()
 

@@ -50,12 +50,13 @@ import Bcube:
     _scalar_shape_functions
 
 #>>>>>>>> Adapt some structures
+
 Adapt.@adapt_structure Connectivity
 
-function Adapt.adapt_structure(to, conn::MeshConnectivity{C,F,T,B}) where {C,F,T,B}
+function Adapt.adapt_structure(to, conn::MeshConnectivity{C, F, T, B}) where {C, F, T, B}
     layers = adapt(to, nlayers(conn))
     ind = adapt(to, indices(conn))
-    MeshConnectivity{typeof(ind),F,T,B,typeof(layers)}(layers, ind)
+    MeshConnectivity{typeof(ind), F, T, B, typeof(layers)}(layers, ind)
 end
 
 function Adapt.adapt_structure(to, mesh::Mesh)
@@ -65,6 +66,7 @@ function Adapt.adapt_structure(to, mesh::Mesh)
     bc_nodes_gpu = adapt(to, boundary_nodes(mesh))
     bc_faces_gpu = adapt(to, boundary_faces(mesh))
     metadata_gpu = adapt(to, get_metadata(mesh))
+    backend_gpu = BcubeAccelerated.BcubeBackendAcc(get_backend(adapt(to, ones(1))))
 
     Mesh{
         topodim(mesh),
@@ -75,6 +77,7 @@ function Adapt.adapt_structure(to, mesh::Mesh)
         typeof(bc_nodes_gpu),
         typeof(bc_faces_gpu),
         typeof(metadata_gpu),
+        typeof(backend_gpu),
     }(
         nodes_gpu,
         entities_gpu,
@@ -82,6 +85,7 @@ function Adapt.adapt_structure(to, mesh::Mesh)
         bc_nodes_gpu,
         bc_faces_gpu,
         metadata_gpu,
+        backend_gpu,
     )
 end
 
@@ -91,7 +95,7 @@ function Adapt.adapt_structure(to, cinfo::CellInfo)
     nodes_gpu = adapt(to, nodes(cinfo))
     nodes_index_gpu = adapt(to, get_nodes_index(cinfo))
 
-    CellInfo{typeof(celltype_gpu),typeof(nodes_gpu),typeof(nodes_index_gpu)}(
+    CellInfo{typeof(celltype_gpu), typeof(nodes_gpu), typeof(nodes_index_gpu)}(
         cellindex_gpu,
         celltype_gpu,
         nodes_gpu,
@@ -99,42 +103,61 @@ function Adapt.adapt_structure(to, cinfo::CellInfo)
     )
 end
 
+Adapt.@adapt_structure Bcube.SubDomain
+Adapt.@adapt_structure Bcube.SubDomainIterator
+
 Adapt.@adapt_structure CellDomain
 Adapt.@adapt_structure InteriorFaceDomain
+
+Adapt.@adapt_structure Bcube.PeriodicBCType
 
 function Adapt.adapt_structure(to, b::BoundaryFaceDomain)
     mesh = adapt(to, Bcube.get_mesh(b))
     bc = adapt(to, Bcube.get_bc(b))
     labels = adapt(to, b.labels)
     cache = adapt(to, Bcube.get_cache(b))
+    subdomains = adapt(to, Bcube.get_subdomains(b))
+    uniqueTags = adapt(to, Bcube.get_unique_tags(b))
 
-    BoundaryFaceDomain{typeof(mesh),typeof(bc),typeof(labels),typeof(cache)}(
+    BoundaryFaceDomain{
+        typeof(mesh),
+        typeof(bc),
+        typeof(labels),
+        typeof(cache),
+        typeof(subdomains),
+        typeof(uniqueTags),
+    }(
         mesh,
         bc,
         labels,
         cache,
+        subdomains,
+        uniqueTags,
     )
-end
-
-function Adapt.adapt_structure(
-    to,
-    b::BoundaryFaceDomain{M,BC},
-) where {M,BC<:Bcube.PeriodicBCType}
-    error("not implemented yet")
 end
 
 Adapt.@adapt_structure Measure
 
 Adapt.@adapt_structure DofHandler
 
-function Adapt.adapt_structure(to, feSpace::SingleFESpace{S,FS}) where {S,FS}
+function Adapt.adapt_structure(to, feSpace::SingleFESpace{S, FS}) where {S, FS}
     dhl = adapt(to, _get_dhl(feSpace))
     tags = adapt(to, get_dirichlet_boundary_tags(feSpace))
-    SingleFESpace{S,FS,typeof(dhl),typeof(tags)}(
+    SingleFESpace{S, FS, typeof(dhl), typeof(tags)}(
         get_function_space(feSpace),
         dhl,
         is_continuous(feSpace),
         tags,
+    )
+end
+
+function Adapt.adapt_structure(to, feSpace::MultiFESpace{N}) where {N}
+    feSpaces = map(Base.Fix1(adapt, to), feSpace.feSpaces)
+    mapping = adapt(to, feSpace.mapping)
+    Bcube.MultiFESpace{N, typeof(feSpaces), typeof(mapping)}(
+        feSpaces,
+        mapping,
+        feSpace.arrayOfStruct,
     )
 end
 
@@ -149,7 +172,7 @@ Adapt.@adapt_structure SingleFieldFEFunction
     n_neighbors[iface] = length(f2c[iface])
 end
 
-function Bcube.inner_faces(mesh::Mesh{T,S,N}) where {T,S,N<:AbstractGPUArray}
+function Bcube.inner_faces(mesh::Mesh{T, S, N}) where {T, S, N <: AbstractGPUArray}
     # TODO : recall why we can't just use `n_neighbors = AK.map(length, f2c)` ?
     # (maybe I haven't tried)
     f2c = indices(connectivities(mesh, :f2c))
@@ -158,11 +181,12 @@ function Bcube.inner_faces(mesh::Mesh{T,S,N}) where {T,S,N<:AbstractGPUArray}
     inner_faces_kernel!(backend, WORKGROUP_SIZE)(
         n_neighbors,
         f2c;
-        ndrange=size(n_neighbors),
+        ndrange = size(n_neighbors),
     )
     return findall(n_neighbors .> 1)
 end
 
-
 Adapt.adapt_structure(to::AbstractBcubeBackendAcc, x) = adapt_structure(get_backend(to), x)
+
+Adapt.adapt(to::Bcube.AbstractBcubeBackend, x) = x
 Adapt.adapt(to::AbstractBcubeBackendAcc, x) = adapt(get_backend(to), x)
