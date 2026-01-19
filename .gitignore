@@ -30,3 +30,5 @@ JuliaLocalPreferences.toml
 # VTK files
 *.vtk
 *.pvd
+
+.vscode

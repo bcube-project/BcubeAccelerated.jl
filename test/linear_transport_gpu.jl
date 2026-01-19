@@ -9,7 +9,6 @@ using SparseArrays, LinearAlgebra
 using TimerOutputs
 using StaticArrays
 using Adapt
-using BcubeVTK
 using BenchmarkTools
 
 const to = TimerOutput()
@@ -118,7 +117,7 @@ function main(nx, ny, nite, degree, backend)
     l_Γ_out(v) = ∫((upwind ∘ (side⁻(u), 0.0, side⁻(nΓ_out))) * side⁻(v))dΓ_out
 
     ## Allocate buffers for linear assembling
-    b_vol = KernelAbstractions.ones(backend, Float64, get_ndofs(U))
+    b_vol = Bcube.allocate_dofs(U)
     b_fac = similar(b_vol)
     rhs = similar(b_vol)
 

@@ -6,9 +6,12 @@ using KernelAbstractions
 using CUDA, CUDA.CUSPARSE, CUDA.CUSOLVER
 using SparseArrays, LinearAlgebra
 using TimerOutputs
+using Test
 
 include("linear_transport_gpu.jl")
 using .LinearTransportGpu
 
 include("covo_gpu.jl")
 using .CovoGpu
+
+include("assemble.jl")
