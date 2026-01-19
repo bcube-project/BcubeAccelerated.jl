@@ -66,7 +66,7 @@ function Adapt.adapt_structure(to, mesh::Mesh)
     bc_nodes_gpu = adapt(to, boundary_nodes(mesh))
     bc_faces_gpu = adapt(to, boundary_faces(mesh))
     metadata_gpu = adapt(to, get_metadata(mesh))
-    backend_gpu = BcubeAccelerated.BcubeBackendAcc(get_backend(adapt(to, ones(1))))
+    backend_gpu = BcubeAccelerated.BcubeBackendAcc(get_backend(adapt(to, ones(Float32, 1)))) # Float32 here is a conservative choice
 
     Mesh{
         topodim(mesh),

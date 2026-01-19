@@ -399,7 +399,7 @@ function run_covo(backend)
     # Define variables and test functions
     fs = FunctionSpace(fspace, degree)
     mesh, U, V, mesh_cpu = setup(backend, tmp_path, fs)
-    u = FEFunction(U, KernelAbstractions.zeros(backend, Float64, get_ndofs(U)))
+    u = FEFunction(U)
 
     @show Bcube.get_ndofs(U)
 
