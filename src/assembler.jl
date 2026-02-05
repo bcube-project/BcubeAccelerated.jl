@@ -1,15 +1,25 @@
 
 function Bcube.__update_b!(
-    b::AbstractVector{T},
+    b::AbstractVector{T1},
     dofs::AbstractVector{<:Integer},
-    vals::NTuple{N, T},
+    vals::NTuple{N, T2},
     backend::BcubeBackendAcc,
-) where {N, T}
+) where {T1 <: Number, T2 <: Number, N}
     for (i, val) in zip(dofs, vals)
         Atomix.@atomic b[i] += val
     end
     nothing
 end
+
+# #fix ambiguity
+# function Bcube.__update_b!(
+#     b::AbstractVector,
+#     dofs,
+#     vals::NullOperator,
+#     backend::BcubeBackendAcc,
+# )
+#     nothing
+# end
 
 function Bcube.allocate_bilinear(
     backend::AbstractBcubeBackendAcc,
