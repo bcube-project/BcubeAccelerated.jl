@@ -30,3 +30,4 @@ JuliaLocalPreferences.toml
 # VTK files
 *.vtk
 *.pvd
+*.vtu

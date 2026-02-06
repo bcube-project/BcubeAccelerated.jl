@@ -89,6 +89,8 @@ function Adapt.adapt_structure(to, mesh::Mesh)
     )
 end
 
+#Adapt.@adapt_structure FaceInfo
+
 function Adapt.adapt_structure(to, cinfo::CellInfo)
     cellindex_gpu = adapt(to, cellindex(cinfo))
     celltype_gpu = adapt(to, celltype(cinfo))
