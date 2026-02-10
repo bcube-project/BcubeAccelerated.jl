@@ -7,8 +7,12 @@ using CUDA, CUDA.CUSPARSE, CUDA.CUSOLVER
 using SparseArrays, LinearAlgebra
 using TimerOutputs
 
-include("linear_transport_gpu.jl")
-using .LinearTransportGpu
+@testset "BcubeAccelerated.jl" begin
 
-include("covo_gpu.jl")
-using .CovoGpu
+    include("linear_transport_gpu.jl")
+    using .LinearTransportGpu
+
+    include("covo_gpu.jl")
+    using .CovoGpu
+
+end
