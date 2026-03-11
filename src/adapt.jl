@@ -66,6 +66,8 @@ function Adapt.adapt_structure(to, mesh::Mesh)
     bc_nodes_gpu = adapt(to, boundary_nodes(mesh))
     bc_faces_gpu = adapt(to, boundary_faces(mesh))
     metadata_gpu = adapt(to, get_metadata(mesh))
+    abs_node = adapt(to, Bcube.get_absolute_node_indices(mesh))
+    abs_cell = adapt(to, Bcube.get_absolute_cell_indices(mesh))
     backend_gpu = BcubeAccelerated.BcubeBackendAcc(get_backend(adapt(to, ones(1))))
 
     Mesh{
@@ -76,6 +78,8 @@ function Adapt.adapt_structure(to, mesh::Mesh)
         typeof(connectivities_gpu),
         typeof(bc_nodes_gpu),
         typeof(bc_faces_gpu),
+        typeof(abs_node),
+        typeof(abs_cell),
         typeof(metadata_gpu),
         typeof(backend_gpu),
     }(
@@ -84,6 +88,8 @@ function Adapt.adapt_structure(to, mesh::Mesh)
         connectivities_gpu,
         bc_nodes_gpu,
         bc_faces_gpu,
+        abs_node,
+        abs_cell,
         metadata_gpu,
         backend_gpu,
     )
