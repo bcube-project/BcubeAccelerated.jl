@@ -106,15 +106,17 @@ function Bcube.get_return_type_and_codim(
     iter_subdomain = Bcube.SubDomainIterator(domain, subdomain)
     indices = KernelAbstractions.zeros(backend, Int, 1)
     function _f(i, valSize)
-        elementInfo = iter_subdomain[i]
-        _return_type_size(valSize, f, elementInfo)
-        nothing
+        elementInfo = first(iter_subdomain[i])
+        value = _return_type_size(valSize, f, elementInfo)
+        value
     end
     maxRank = 10
     valSize = KernelAbstractions.zeros(backend, Int, maxRank)
     AK.foreachindex(i -> _f(i, valSize), indices, get_backend(backend))
     KernelAbstractions.synchronize(get_backend(backend))
-    N = (findall(x -> x ≠ 0, Array(valSize))...,)
-    T = Base.return_types(_f, (Int, eltype(valSize)))
+    ind = findall(x -> x ≠ 0, Array(valSize))
+    N = (valSize[ind]...,)
+    _T = Base.return_types(i -> _f(i, valSize), (Int,))
+    T = eltype(first(_T))
     return T, N
 end
