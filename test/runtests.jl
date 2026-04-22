@@ -1,4 +1,5 @@
 println("Testing...")
+using Adapt
 using Bcube
 using BcubeAccelerated
 using Test
