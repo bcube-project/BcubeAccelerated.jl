@@ -31,3 +31,7 @@ JuliaLocalPreferences.toml
 *.vtk
 *.pvd
 *.vtu
+
+settings.json
+
+**/tmp
