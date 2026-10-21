@@ -15,6 +15,8 @@ using StaticArrays
 using BenchmarkTools
 using UnPack
 
+const WITH_VTK_OUTPUT = false
+
 function compute_residual(_u, V, params, cache)
     u = get_fe_functions(_u)
 
@@ -437,7 +439,7 @@ function run_covo(backend)
     end
 
     # Write initial solution
-    append_vtk(vtk, map(x -> adapt(get_backend(zeros(1)), x), (u...,)), t, params)
+    WITH_VTK_OUTPUT && append_vtk(vtk, map(x -> adapt(get_backend(zeros(1)), x), (u...,)), t, params)
 
     # Time loop
     for i in 1:nite
@@ -460,7 +462,7 @@ function run_covo(backend)
         t += Δt
 
         # Write solution to file
-        if (i % Int(max(floor(nite / nout), 1)) == 0)
+        if (i % Int(max(floor(nite / nout), 1)) == 0) && WITH_VTK_OUTPUT
             println("--> VTK export")
             append_vtk(vtk, map(x -> adapt(get_backend(zeros(1)), x), (u...,)), t, params)
         end
