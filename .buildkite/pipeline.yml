@@ -12,6 +12,3 @@ steps:
       queue: "cuda"
     if: build.message !~ /\[skip tests\]/
     timeout_in_minutes: 60
-
-env:
-  JULIA_PKG_SERVER_REGISTRY_PREFERENCE: "eager"
