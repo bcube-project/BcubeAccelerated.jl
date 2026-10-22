@@ -1,4 +1,4 @@
-# Tests on GPU back-ends. Draft pull requests skip them, unless selected by name in the last commit message: `[only cuda]`, `[only metal, oneapi]`
+# Tests on GPU back-ends. Draft pull requests skip them, unless selected by name in the last commit message: `[only cuda]`
 # or `[only tests]` for all of them. `[skip amdgpu]` or `[skip tests]` does the opposite.
 
 steps:
