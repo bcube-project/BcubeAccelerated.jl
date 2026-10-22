@@ -9,13 +9,17 @@ using SparseArrays, LinearAlgebra
 using TimerOutputs
 
 @testset "BcubeAccelerated.jl" begin
-    include("test_domain.jl")
+    if get(ENV, "WITH_CPU_TESTS", "true") == "true"
+        include("test_domain.jl")
+    end
 
-    include("linear_transport_gpu.jl")
-    using .LinearTransportGpu
+    if get(ENV, "WITH_CUDA_TESTS", "true") == "true"
+        include("linear_transport_gpu.jl")
+        using .LinearTransportGpu
 
-    include("covo_gpu.jl")
-    using .CovoGpu
+        include("covo_gpu.jl")
+        using .CovoGpu
+    end
 
     @test true # Checkpoint
 end

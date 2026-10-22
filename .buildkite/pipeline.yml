@@ -15,7 +15,8 @@ steps:
     agents:
       queue: "cuda"
     env:
-      JULIA_TARGET_DEVICE: cuda
+      WITH_CUDA_TESTS: "true"
+      WITH_CPU_TESTS: "false"
 
     if: |
       build.message !~ /\[skip [^\]]*(tests|cuda)/ &&

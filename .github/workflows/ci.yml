@@ -31,6 +31,9 @@ jobs:
     env:
       GITHUB_CI: "true"
     steps:
+      env:
+        WITH_CUDA_TESTS: "false"
+        WITH_CPU_TESTS: "true"
       - uses: actions/checkout@v7
         with:
           lfs: "true"
