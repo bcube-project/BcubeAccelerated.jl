@@ -8,6 +8,9 @@ using CUDA, CUDA.CUSPARSE, CUDA.CUSOLVER
 using SparseArrays, LinearAlgebra
 using TimerOutputs
 
+@show get(ENV, "WITH_CPU_TESTS", "invalid")
+@show get(ENV, "WITH_GPU_TESTS", "invalid")
+
 @testset "BcubeAccelerated.jl" begin
     if get(ENV, "WITH_CPU_TESTS", "true") == "true"
         include("test_domain.jl")
