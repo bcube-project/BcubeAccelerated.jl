@@ -8,14 +8,23 @@ using CUDA, CUDA.CUSPARSE, CUDA.CUSOLVER
 using SparseArrays, LinearAlgebra
 using TimerOutputs
 
+WITH_CPU_TESTS = get(ENV, "WITH_CPU_TESTS", "true") == "true"
+WITH_CUDA_TESTS = get(ENV, "WITH_CUDA_TESTS", "true") == "true"
+
+@show WITH_CPU_TESTS, WITH_CUDA_TESTS
+
 @testset "BcubeAccelerated.jl" begin
-    include("test_domain.jl")
+    if WITH_CPU_TESTS
+        include("test_domain.jl")
+    end
 
-    include("linear_transport_gpu.jl")
-    using .LinearTransportGpu
+    if WITH_CUDA_TESTS
+        include("linear_transport_gpu.jl")
+        using .LinearTransportGpu
 
-    include("covo_gpu.jl")
-    using .CovoGpu
+        include("covo_gpu.jl")
+        using .CovoGpu
+    end
 
     @test true # Checkpoint
 end
