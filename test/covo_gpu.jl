@@ -439,7 +439,8 @@ function run_covo(backend)
     end
 
     # Write initial solution
-    WITH_VTK_OUTPUT && append_vtk(vtk, map(x -> adapt(get_backend(zeros(1)), x), (u...,)), t, params)
+    WITH_VTK_OUTPUT &&
+        append_vtk(vtk, map(x -> adapt(get_backend(zeros(1)), x), (u...,)), t, params)
 
     # Time loop
     for i in 1:nite
