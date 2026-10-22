@@ -31,9 +31,6 @@ jobs:
     env:
       GITHUB_CI: "true"
     steps:
-      env:
-        WITH_CUDA_TESTS: "false"
-        WITH_CPU_TESTS: "true"
       - uses: actions/checkout@v7
         with:
           lfs: "true"
@@ -53,6 +50,9 @@ jobs:
             ${{ runner.os }}-
       - uses: julia-actions/julia-buildpkg@latest
       - uses: julia-actions/julia-runtest@latest
+        env:
+          WITH_CUDA_TESTS: "false"
+          WITH_CPU_TESTS: "true"
       - uses: julia-actions/julia-processcoverage@latest
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v7
