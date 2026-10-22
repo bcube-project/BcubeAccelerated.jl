@@ -8,8 +8,8 @@ using CUDA, CUDA.CUSPARSE, CUDA.CUSOLVER
 using SparseArrays, LinearAlgebra
 using TimerOutputs
 
-WITH_CPU_TESTS = get(ENV, "WITH_CPU_TESTS", "true")
-WITH_GPU_TESTS = get(ENV, "WITH_CPU_TESTS", "true")
+WITH_CPU_TESTS = get(ENV, "WITH_CPU_TESTS", "true") == "true"
+WITH_GPU_TESTS = get(ENV, "WITH_CPU_TESTS", "true") == "true"
 
 @show WITH_CPU_TESTS, WITH_GPU_TESTS
 
