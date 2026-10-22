@@ -9,7 +9,7 @@ using SparseArrays, LinearAlgebra
 using TimerOutputs
 
 WITH_CPU_TESTS = get(ENV, "WITH_CPU_TESTS", "true") == "true"
-WITH_GPU_TESTS = get(ENV, "WITH_CUDA_TESTS", "true") == "true"
+WITH_CUDA_TESTS = get(ENV, "WITH_CUDA_TESTS", "true") == "true"
 
 @show WITH_CPU_TESTS, WITH_CUDA_TESTS
 
