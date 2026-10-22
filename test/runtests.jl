@@ -8,15 +8,17 @@ using CUDA, CUDA.CUSPARSE, CUDA.CUSOLVER
 using SparseArrays, LinearAlgebra
 using TimerOutputs
 
-@show get(ENV, "WITH_CPU_TESTS", "invalid")
-@show get(ENV, "WITH_GPU_TESTS", "invalid")
+WITH_CPU_TESTS = get(ENV, "WITH_CPU_TESTS", "true")
+WITH_GPU_TESTS = get(ENV, "WITH_CPU_TESTS", "true")
+
+@show WITH_CPU_TESTS, WITH_GPU_TESTS
 
 @testset "BcubeAccelerated.jl" begin
-    if get(ENV, "WITH_CPU_TESTS", "true") == "true"
+    if WITH_CPU_TESTS
         include("test_domain.jl")
     end
 
-    if get(ENV, "WITH_CUDA_TESTS", "true") == "true"
+    if WITH_GPU_TESTS
         include("linear_transport_gpu.jl")
         using .LinearTransportGpu
 

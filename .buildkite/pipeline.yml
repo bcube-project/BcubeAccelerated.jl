@@ -17,9 +17,8 @@ steps:
     env:
       WITH_CUDA_TESTS: "true"
       WITH_CPU_TESTS: "false"
-
-    if: |
-      build.message !~ /\[skip [^\]]*(tests|cuda)/ &&
-      (build.message =~ /\[only [^\]]*(tests|cuda)/ ||
-       build.message !~ /\[only / && !build.pull_request.draft)
+    # if: |
+    #   build.message !~ /\[skip [^\]]*(tests|cuda)/ &&
+    #   (build.message =~ /\[only [^\]]*(tests|cuda)/ ||
+    #    build.message !~ /\[only / && !build.pull_request.draft)
     timeout_in_minutes: 60
