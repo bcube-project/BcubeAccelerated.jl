@@ -10,8 +10,7 @@ steps:
     plugins:
       - JuliaCI/julia#v1:
           version: "{{matrix.version}}"
-      #- JuliaCI/julia-test#v1: ~
-    command: julia --eval='println("Skipping CUDA tests - pipeline configured to do nothing")'
+      - JuliaCI/julia-test#v1: ~
     agents:
       queue: "cuda"
     env:
