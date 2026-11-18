@@ -62,7 +62,7 @@ function Bcube._foreach_element(
     _f(i) = f(iter_subdomain[i]...)
     AK.foreachindex(_f, indices, get_backend(backend))
     KernelAbstractions.synchronize(get_backend(backend))
-    return nothing
+    nothing
 end
 
 function Bcube._map_element(

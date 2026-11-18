@@ -60,12 +60,21 @@ function Adapt.adapt_structure(to, conn::MeshConnectivity{C, F, T, B}) where {C,
 end
 
 function Adapt.adapt_structure(to, mesh::Mesh)
-    nodes_gpu = adapt(to, get_nodes(mesh))
+    mesh_nodes = get_nodes(mesh)
+    nodes_gpu = adapt(to, mesh_nodes)
     entities_gpu = adapt(to, entities(mesh))
     connectivities_gpu = adapt(to, connectivities(mesh))
     bc_nodes_gpu = adapt(to, boundary_nodes(mesh))
     bc_faces_gpu = adapt(to, boundary_faces(mesh))
-    metadata_gpu = adapt(to, get_metadata(mesh))
+    metadata = get_metadata(mesh)
+    adapting_to_device = nodes_gpu isa AbstractGPUArray ||
+                         (mesh_nodes isa AbstractGPUArray && !(nodes_gpu isa Array))
+    adapted_metadata = if adapting_to_device && !isbits(metadata)
+        @warn "Using default mesh metadata on the device because the source metadata is not isbits" metadata_type = typeof(metadata)
+        Bcube.DefaultMeshMetaData()
+    else
+        adapt(to, metadata)
+    end
     abs_node = adapt(to, Bcube.get_absolute_node_indices(mesh))
     abs_cell = adapt(to, Bcube.get_absolute_cell_indices(mesh))
     backend_gpu = BcubeAccelerated.BcubeBackendAcc(get_backend(adapt(to, ones(1))))
@@ -80,7 +89,7 @@ function Adapt.adapt_structure(to, mesh::Mesh)
         typeof(bc_faces_gpu),
         typeof(abs_node),
         typeof(abs_cell),
-        typeof(metadata_gpu),
+        typeof(adapted_metadata),
         typeof(backend_gpu),
     }(
         nodes_gpu,
@@ -90,7 +99,7 @@ function Adapt.adapt_structure(to, mesh::Mesh)
         bc_faces_gpu,
         abs_node,
         abs_cell,
-        metadata_gpu,
+        adapted_metadata,
         backend_gpu,
     )
 end
@@ -148,14 +157,25 @@ Adapt.@adapt_structure Measure
 
 Adapt.@adapt_structure DofHandler
 
+"""
+    Bcube.get_dirichlet_boundary_tags(feSpace::SingleFESpace{S, FS, DHL, Val{Tags}}) where {S, FS <: Bcube.AbstractFunctionSpace, DHL, Tags}
+
+Read the boundary tags encoded in an adapted space's type, in their original order.
+"""
+Bcube.get_dirichlet_boundary_tags(
+    ::SingleFESpace{S, FS, DHL, Val{Tags}},
+) where {S, FS <: Bcube.AbstractFunctionSpace, DHL, Tags} = Tags
+
 function Adapt.adapt_structure(to, feSpace::SingleFESpace{S, FS}) where {S, FS}
     dhl = adapt(to, _get_dhl(feSpace))
-    tags = adapt(to, get_dirichlet_boundary_tags(feSpace))
-    SingleFESpace{S, FS, typeof(dhl), typeof(tags)}(
+    tags = get_dirichlet_boundary_tags(feSpace)
+    # Keep tags available to host orchestration without capturing Symbols in kernels.
+    adapted_tags = dhl.iglob isa Array ? tags : Val(Tuple(tags))
+    SingleFESpace{S, FS, typeof(dhl), typeof(adapted_tags)}(
         get_function_space(feSpace),
         dhl,
         is_continuous(feSpace),
-        tags,
+        adapted_tags,
     )
 end
 

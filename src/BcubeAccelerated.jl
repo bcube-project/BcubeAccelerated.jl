@@ -2,6 +2,7 @@ module BcubeAccelerated
 using Bcube
 using Adapt
 using GPUArrays
+using SparseArrays
 using Atomix
 using KernelAbstractions
 
@@ -16,5 +17,6 @@ include("adapt.jl")
 include("fespace.jl")
 include("domain.jl")
 include("assembler.jl")
+include("dirichlet_condition.jl")
 
 end
