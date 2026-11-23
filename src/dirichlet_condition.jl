@@ -9,8 +9,8 @@ function Bcube.dirichlet_face_offsets(
 ) where {K, B <: KernelAbstractions.GPU}
     isempty(counts) && return similar(counts, 0), 0
     execution_backend = get_backend(backend)
-    offsets = AK.accumulate(+, counts, execution_backend; init = 0, inclusive = false)
-    occurrence_count = AK.reduce(+, counts, execution_backend; init = 0)
+    offsets = AK.accumulate(+, counts; backend = execution_backend, init = 0, inclusive = false)
+    occurrence_count = AK.reduce(+, counts; backend = execution_backend, init = 0)
     return offsets, occurrence_count
 end
 
@@ -30,7 +30,7 @@ function Bcube.unique_dirichlet_indices(
     # Concurrent occurrences retain the lowest position for their global dof.
     first_occurrence = similar(occurrences, Int, ndofs)
     fill!(first_occurrence, typemax(Int))
-    AK.foreachindex(occurrences, execution_backend) do occurrence
+    AK.foreachindex(occurrences; backend = execution_backend) do occurrence
         @inbounds dof = occurrences[occurrence]
         @inbounds Atomix.@atomic :monotonic first_occurrence[dof] min occurrence
     end
@@ -38,7 +38,7 @@ function Bcube.unique_dirichlet_indices(
 
     # Scan in occurrence order so the compact indices follow CPU encounter order.
     retained = similar(occurrences, Int)
-    AK.foreachindex(occurrences, execution_backend) do occurrence
+    AK.foreachindex(occurrences; backend = execution_backend) do occurrence
         @inbounds dof = occurrences[occurrence]
         @inbounds retained[occurrence] = first_occurrence[dof] == occurrence
     end
@@ -46,7 +46,7 @@ function Bcube.unique_dirichlet_indices(
     offsets, unique_count = Bcube.dirichlet_face_offsets(retained, backend)
 
     indices = similar(occurrences, unique_count)
-    AK.foreachindex(occurrences, execution_backend) do occurrence
+    AK.foreachindex(occurrences; backend = execution_backend) do occurrence
         @inbounds if retained[occurrence] != 0
             dof = occurrences[occurrence]
             position = offsets[occurrence] + 1
@@ -86,31 +86,31 @@ function Bcube.prepare_dirichlet_vector!(
     stored_indices = SparseArrays.nonzeroinds(b)
     stored_values = nonzeros(b)
     positions = KernelAbstractions.zeros(backend, Int, length(I_diri))
-    AK.foreachindex(stored_indices, execution_backend) do stored_position
+    AK.foreachindex(stored_indices; backend = execution_backend) do stored_position
         @inbounds position = position_by_dof[stored_indices[stored_position]]
         @inbounds if position != 0
             positions[position] = stored_position
         end
     end
     KernelAbstractions.synchronize(backend)
-    absent_count = AK.mapreduce(iszero, +, positions, execution_backend; init = 0)
+    absent_count = AK.mapreduce(iszero, +, positions; backend = execution_backend, init = 0)
     absent_count == 0 && return positions
 
     # Mark the union of stored and constrained dofs in global index order.
     stored_by_dof = KernelAbstractions.zeros(backend, Int, length(b))
-    AK.foreachindex(stored_indices, execution_backend) do stored_position
+    AK.foreachindex(stored_indices; backend = execution_backend) do stored_position
         @inbounds stored_by_dof[stored_indices[stored_position]] = stored_position
     end
     KernelAbstractions.synchronize(backend)
     retained = similar(stored_by_dof)
-    AK.foreachindex(retained, execution_backend) do dof
+    AK.foreachindex(retained; backend = execution_backend) do dof
         @inbounds retained[dof] = stored_by_dof[dof] != 0 || position_by_dof[dof] != 0
     end
-    offsets = AK.accumulate(+, retained, execution_backend; init = 0, inclusive = false)
+    offsets = AK.accumulate(+, retained; backend = execution_backend, init = 0, inclusive = false)
     new_count = length(stored_indices) + absent_count
     new_indices = similar(stored_indices, new_count)
     new_values = similar(stored_values, new_count)
-    AK.foreachindex(retained, execution_backend) do dof
+    AK.foreachindex(retained; backend = execution_backend) do dof
         @inbounds if retained[dof] != 0
             new_position = offsets[dof] + 1
             old_position = stored_by_dof[dof]
@@ -170,7 +170,7 @@ The accelerated method synchronizes before returning.
 """
 function Bcube.set_dirichlet_values!(b, positions, V_diri, backend::AbstractBcubeBackendAcc)
     storage = Bcube.dirichlet_vector_storage(b)
-    AK.foreachindex(V_diri, get_backend(backend)) do k
+    AK.foreachindex(V_diri; backend = get_backend(backend)) do k
         storage[positions[k]] = V_diri[k]
     end
     KernelAbstractions.synchronize(backend)
@@ -183,7 +183,7 @@ Find the diagonal of each constrained CSC column. Store zero for an absent
 diagonal and wait for the positions before returning.
 """
 function fill_device_csc_diagonal_positions!(positions, I_diri, rows, pointers, backend)
-    AK.foreachindex(I_diri, get_backend(backend)) do k
+    AK.foreachindex(I_diri; backend = get_backend(backend)) do k
         @inbounds begin
             column = I_diri[k]
             positions[k] = 0
@@ -218,22 +218,22 @@ function Bcube.prepare_dirichlet_matrix!(
     rows = rowvals(matrix)
     pointers = SparseArrays.getcolptr(matrix)
     fill_device_csc_diagonal_positions!(positions, I_diri, rows, pointers, backend)
-    absent_count = AK.mapreduce(iszero, +, positions, execution_backend; init = 0)
+    absent_count = AK.mapreduce(iszero, +, positions; backend = execution_backend, init = 0)
     absent_count == 0 && return positions
 
     column_count = size(matrix, 2)
     insert_by_column = KernelAbstractions.zeros(backend, Int, column_count)
-    AK.foreachindex(I_diri, execution_backend) do k
+    AK.foreachindex(I_diri; backend = execution_backend) do k
         @inbounds insert_by_column[I_diri[k]] = iszero(positions[k])
     end
-    offsets = AK.accumulate(+, insert_by_column, execution_backend; init = 0, inclusive = false)
+    offsets = AK.accumulate(+, insert_by_column; backend = execution_backend, init = 0, inclusive = false)
 
     values = nonzeros(matrix)
     new_count = length(values) + absent_count
     new_pointers = similar(pointers)
     new_rows = similar(rows, new_count)
     new_values = similar(values, new_count)
-    AK.foreachindex(insert_by_column, execution_backend) do column
+    AK.foreachindex(insert_by_column; backend = execution_backend) do column
         @inbounds begin
             new_position = Int(pointers[column]) + offsets[column]
             new_pointers[column] = new_position

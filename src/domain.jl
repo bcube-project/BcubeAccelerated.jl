@@ -60,7 +60,7 @@ function Bcube._foreach_element(
     indices = Bcube.get_indices(subdomain)
     iter_subdomain = Bcube.SubDomainIterator(domain, subdomain)
     _f(i) = f(iter_subdomain[i]...)
-    AK.foreachindex(_f, indices, get_backend(backend))
+    AK.foreachindex(_f, indices; backend = get_backend(backend))
     KernelAbstractions.synchronize(get_backend(backend))
     nothing
 end
@@ -112,7 +112,7 @@ function Bcube.get_return_type_and_codim(
     end
     maxRank = 10
     valSize = KernelAbstractions.zeros(backend, Int, maxRank)
-    AK.foreachindex(i -> _f(i, valSize), indices, get_backend(backend))
+    AK.foreachindex(i -> _f(i, valSize), indices; backend = get_backend(backend))
     KernelAbstractions.synchronize(get_backend(backend))
     ind = findall(x -> x ≠ 0, Array(valSize))
     N = (valSize[ind]...,)

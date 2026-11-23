@@ -10,10 +10,9 @@ Atomix = "a9b6321e-bd34-4604-b9c9-b65b8de01458"
 Bcube = "cf06320b-b7f3-4748-8003-81a6b6979792"
 GPUArrays = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
 KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
-
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
-AcceleratedKernels = "0.4.3"
+AcceleratedKernels = "0.5.13"
 Bcube = "0.5.1"
 KernelAbstractions = "0.9"
